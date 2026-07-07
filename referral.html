@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Wound Care Referral — Scan · Snap · Send</title>
 <script src="config.js"></script>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script src="auth.js"></script>
 <style>
   :root {
     --teal-900: #0b4f4a;
@@ -133,6 +135,22 @@
     border-radius: 10px; padding: 11px 20px; cursor: pointer;
   }
   .again:hover { background: var(--teal-50); }
+  .user-chip {
+    margin-left: auto; text-align: right; font-size: 12.5px; color: var(--muted);
+  }
+  .user-chip b { display: block; font-size: 13px; color: var(--ink); font-weight: 600; }
+  .user-chip a { color: var(--teal-700); cursor: pointer; text-decoration: underline; }
+  .sign-card { text-align: center; padding: 34px 22px; }
+  .sign-card h2 { font-size: 19px; margin: 10px 0 6px; }
+  .sign-card p { font-size: 14px; color: var(--muted); line-height: 1.5; margin-bottom: 20px; }
+  .ms-btn {
+    display: inline-flex; align-items: center; gap: 10px; font: inherit;
+    font-size: 15px; font-weight: 600; color: #fff; background: var(--teal-700);
+    border: none; border-radius: 12px; padding: 13px 22px; cursor: pointer;
+  }
+  .ms-btn:hover { background: var(--teal-600); }
+  .ms-logo { display:inline-grid; grid-template-columns: 8px 8px; gap: 2px; }
+  .ms-logo i { width: 8px; height: 8px; display: block; }
   footer { text-align: center; font-size: 12px; color: var(--muted); margin: 26px 0; }
 </style>
 </head>
@@ -144,10 +162,24 @@
     <h1 id="appName">Wound Care Referral</h1>
     <p id="tagline">Scan · Snap · Send — under 60 seconds</p>
   </div>
+  <div class="user-chip" id="userChip"></div>
 </header>
 
 <main>
-  <div class="card" id="formCard">
+  <div class="card sign-card" id="signCard" style="display:none">
+    <div class="logo" style="margin:0 auto">✚</div>
+    <h2>Sign in to send a referral</h2>
+    <p>Use your Almoosa Microsoft account —<br>the same one you use for email.</p>
+    <button type="button" class="ms-btn" id="signBtn">
+      <span class="ms-logo" aria-hidden="true">
+        <i style="background:#f25022"></i><i style="background:#7fba00"></i>
+        <i style="background:#00a4ef"></i><i style="background:#ffb900"></i>
+      </span>
+      Sign in with Microsoft
+    </button>
+  </div>
+
+  <div class="card" id="formCard" style="display:none">
     <div class="notice">
       <span>📋</span>
       <span>No physician order needed. Pick the suspected stage and you'll get a
@@ -229,14 +261,35 @@
 </main>
 
 <script>
-(function () {
+(async function () {
   const C = WW_CONFIG;
   const $ = (id) => document.getElementById(id);
+
+  /* ---- Microsoft sign-in gate ---- */
+  let account = null;
+  try {
+    account = await wwInitAuth();
+  } catch (e) {
+    console.error("Auth error:", e);
+  }
+  if (!account) {
+    $("signCard").style.display = "";
+    $("signBtn").addEventListener("click", wwSignIn);
+    return; // nothing else runs until signed in
+  }
+  $("signCard").remove();
+  $("formCard").style.display = "";
+  $("userChip").innerHTML =
+    "<b>" + wwUserName(account) + "</b>" +
+    '<a id="signOut">Sign out</a>';
+  document.getElementById("signOut").addEventListener("click", wwSignOut);
 
   document.title = C.APP_NAME + " — Scan · Snap · Send";
   $("appName").textContent = C.APP_NAME;
   $("tagline").textContent = C.TAGLINE;
   $("measureReminder").textContent = "📏 " + C.MEASUREMENT_REMINDER;
+
+  if (!$("nurse").value) $("nurse").value = wwUserName(account);
 
   /* ---- populate dropdowns from config ---- */
   C.FACILITIES.forEach(f => $("facility").add(new Option(f, f)));

@@ -13,7 +13,7 @@ const WW_CONFIG = {
 
   /* Microsoft Entra (Azure AD) sign-in */
   AZURE: {
-    CLIENT_ID: "219fd90f-4c4b-474d-ae7d-a17f71ecc511",
+    CLIENT_ID: "99021e86-9507-4a54-8dc2-d51143d7998a",
     TENANT_ID: "1bbc68f6-abcf-4283-92d7-5bb0a7c3c84b",
   },
 

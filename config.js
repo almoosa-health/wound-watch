@@ -13,9 +13,12 @@ const WW_CONFIG = {
 
   /* Microsoft Entra (Azure AD) sign-in */
   AZURE: {
-    CLIENT_ID: "99021e86-9507-4a54-8dc2-d51143d7998a",
+    CLIENT_ID: "219fd90f-4c4b-474d-ae7d-a17f71ecc511",
     TENANT_ID: "1bbc68f6-abcf-4283-92d7-5bb0a7c3c84b",
   },
+
+  /* Accounts from these domains may sign in */
+  ALLOWED_DOMAINS: ["almoosahospital.com.sa", "almoosahealth.com.sa"],
 
   APP_NAME: "Wound Care Referral",
   TAGLINE: "Scan · Snap · Send — under 60 seconds",

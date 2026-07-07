@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Wound Care Referral — Scan · Snap · Send</title>
 <script src="config.js"></script>
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
-<script src="auth.js"></script>
 <style>
   :root {
     --teal-900: #0b4f4a;
@@ -265,31 +263,83 @@
   const C = WW_CONFIG;
   const $ = (id) => document.getElementById(id);
 
-  /* ---- Microsoft sign-in gate ---- */
-  let account = null;
-  try {
-    account = await wwInitAuth();
-  } catch (e) {
-    console.error("Auth error:", e);
+  /* ---- Microsoft sign-in gate ----
+     Same lightweight pattern as the Almoosa temp-monitor app:
+     no library — manual redirect to Microsoft, read the id_token
+     from the return URL, decode it, check the domain. */
+  const REDIRECT_URI = location.origin + location.pathname;
+
+  function signIn() {
+    const p = new URLSearchParams({
+      client_id: C.AZURE.CLIENT_ID,
+      response_type: "id_token",
+      redirect_uri: REDIRECT_URI,
+      scope: "openid profile email",
+      response_mode: "fragment",
+      nonce: Math.random().toString(36).slice(2),
+    });
+    location.href = "https://login.microsoftonline.com/" +
+      C.AZURE.TENANT_ID + "/oauth2/v2.0/authorize?" + p.toString();
   }
+  function parseHash(h) {
+    const r = {};
+    h.replace(/^#/, "").split("&").forEach(pair => {
+      const eq = pair.indexOf("=");
+      if (eq > -1) r[decodeURIComponent(pair.slice(0, eq))] =
+        decodeURIComponent(pair.slice(eq + 1));
+    });
+    return r;
+  }
+  function parseJwt(t) {
+    try {
+      const b = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      return JSON.parse(decodeURIComponent(atob(b).split("").map(
+        ch => "%" + ("00" + ch.charCodeAt(0).toString(16)).slice(-2)).join("")));
+    } catch (e) { return {}; }
+  }
+  function domainOK(email) {
+    return (C.ALLOWED_DOMAINS || []).some(d => email.endsWith("@" + d));
+  }
+
+  let account = null;
+  try { account = JSON.parse(sessionStorage.getItem("ww_user") || "null"); } catch (e) {}
+
+  if (location.hash && location.hash.includes("id_token")) {
+    const token = parseHash(location.hash)["id_token"];
+    history.replaceState(null, "", REDIRECT_URI);
+    if (token) {
+      const jwt = parseJwt(token);
+      const email = (jwt.preferred_username || jwt.email || jwt.upn || "").toLowerCase();
+      if (email && domainOK(email)) {
+        account = { name: jwt.name || "", email: email };
+        sessionStorage.setItem("ww_user", JSON.stringify(account));
+      } else {
+        account = null;
+        alert("This account (" + email + ") is not an Almoosa account. Please sign in with your hospital Microsoft account.");
+      }
+    }
+  }
+
   if (!account) {
     $("signCard").style.display = "";
-    $("signBtn").addEventListener("click", wwSignIn);
+    $("signBtn").addEventListener("click", signIn);
     return; // nothing else runs until signed in
   }
   $("signCard").remove();
   $("formCard").style.display = "";
   $("userChip").innerHTML =
-    "<b>" + wwUserName(account) + "</b>" +
-    '<a id="signOut">Sign out</a>';
-  document.getElementById("signOut").addEventListener("click", wwSignOut);
+    "<b>" + account.name + "</b>" + '<a id="signOut">Sign out</a>';
+  document.getElementById("signOut").addEventListener("click", function () {
+    sessionStorage.removeItem("ww_user");
+    location.reload();
+  });
 
   document.title = C.APP_NAME + " — Scan · Snap · Send";
   $("appName").textContent = C.APP_NAME;
   $("tagline").textContent = C.TAGLINE;
   $("measureReminder").textContent = "📏 " + C.MEASUREMENT_REMINDER;
 
-  if (!$("nurse").value) $("nurse").value = wwUserName(account);
+  if (!$("nurse").value) $("nurse").value = account.name;
 
   /* ---- populate dropdowns from config ---- */
   C.FACILITIES.forEach(f => $("facility").add(new Option(f, f)));

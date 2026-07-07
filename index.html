@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pressure Injury Command Center — Wound Watch</title>
+<script src="config.js"></script>
+<script src="chart.umd.min.js"></script>
+<style>
+  :root {
+    --teal-900:#0b4f4a; --teal-700:#0d7a72; --teal-600:#0f8f85; --teal-50:#e8f4f3;
+    --ink:#1c2b2a; --muted:#5f7472; --line:#d9e5e4; --bg:#f2f6f6; --card:#fff;
+    --green:#1a8a5a; --green-bg:#e9f6ef; --blue:#2779bd; --blue-bg:#e8f1f8;
+    --amber:#b07a1e; --amber-bg:#fdf6e8; --red:#c0392b; --red-bg:#fdeceb;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(11,79,74,.05);
+  }
+  *{box-sizing:border-box;margin:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  button{font:inherit;cursor:pointer}
+  .hidden{display:none!important}
+
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 22px;
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:30}
+  .logo{width:40px;height:40px;border-radius:12px;background:var(--teal-700);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+  .htitles h1{font-size:17px;font-weight:700}
+  .htitles p{font-size:12.5px;color:var(--muted)}
+  .hspacer{flex:1}
+  .user-chip{text-align:right;font-size:12px;color:var(--muted)}
+  .user-chip b{display:block;font-size:13px;color:var(--ink)}
+  .user-chip a{color:var(--teal-700);cursor:pointer;text-decoration:underline}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .seg button{border:none;background:none;padding:8px 13px;font-size:13px;font-weight:600;color:var(--muted)}
+  .seg button.on{background:var(--teal-50);color:var(--teal-900)}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);
+    background:#fff;border-radius:10px;padding:8px 13px;font-size:13px;font-weight:600;color:var(--ink)}
+  .btn:hover{background:var(--teal-50)}
+  .btn.primary{background:var(--teal-700);border-color:var(--teal-700);color:#fff}
+  .btn.primary:hover{background:var(--teal-600)}
+  .btn.danger{color:var(--red)}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+
+  main{max-width:1280px;margin:20px auto 70px;padding:0 18px}
+  .filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--card);
+    border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow)}
+  .filters label{font-size:11.5px;font-weight:700;letter-spacing:.6px;color:var(--muted)}
+  .filters select{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);
+    border-radius:9px;background:#fff;color:var(--ink)}
+  .filters .count{margin-left:auto;font-size:12.5px;color:var(--muted)}
+
+  .banner{margin-top:16px;border-radius:var(--radius);padding:26px 28px;color:#fff;
+    background:linear-gradient(135deg,#0d7a72,#0b8f6e);display:flex;gap:24px;flex-wrap:wrap;align-items:center}
+  .banner h2{font-size:26px;line-height:1.25;font-weight:800;max-width:560px}
+  .banner p{font-size:13.5px;opacity:.9;margin-top:8px;max-width:560px}
+  .banner .bstats{display:flex;gap:12px;margin-left:auto;flex-wrap:wrap}
+  .bstat{background:rgba(255,255,255,.13);border-radius:12px;padding:14px 18px;min-width:130px}
+  .bstat .l{font-size:10.5px;font-weight:700;letter-spacing:.8px;opacity:.85}
+  .bstat .v{font-size:26px;font-weight:800;margin-top:4px}
+  .bstat .s{font-size:11px;opacity:.8;margin-top:2px}
+
+  .grid{display:grid;gap:14px;margin-top:16px}
+  .g4{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+  .g2{grid-template-columns:1fr 1fr}
+  .g2-13{grid-template-columns:1.4fr 1fr}
+  @media(max-width:900px){.g2,.g2-13{grid-template-columns:1fr}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 20px;box-shadow:var(--shadow)}
+  .card h3{font-size:15px;font-weight:700}
+  .card .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .kpi .label{font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--muted)}
+  .kpi .val{font-size:34px;font-weight:800;margin-top:6px}
+  .kpi .foot{font-size:12px;color:var(--muted);margin-top:4px}
+  .kpi .delta{display:inline-block;font-size:11.5px;font-weight:700;border-radius:7px;
+    padding:2px 8px;margin-top:8px;background:var(--teal-50);color:var(--teal-900)}
+  .kpi.alert .val{color:var(--red)}
+
+  .risk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px}
+  .risk{background:var(--green-bg);border:1px solid #cfe8db;border-radius:12px;padding:14px 16px}
+  .risk .t{display:flex;justify-content:space-between;font-size:13px;font-weight:700}
+  .risk .t small{font-weight:600;color:var(--muted);font-size:10.5px}
+  .risk .v{font-size:26px;font-weight:800;color:var(--green);margin-top:6px}
+  .risk .v small{font-size:12px;color:var(--muted);font-weight:600}
+  .risk .a{font-size:11.5px;color:var(--muted)}
+
+  .queue-item{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:10px}
+  .queue-item .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .queue-item .pid{font-size:15px;font-weight:800}
+  .badge{font-size:11px;font-weight:700;border:1px solid var(--line);border-radius:8px;padding:2px 8px;color:var(--muted)}
+  .badge.stage{color:var(--teal-900);background:var(--teal-50);border-color:#cfe6e4}
+  .badge.red{color:var(--red);background:var(--red-bg);border-color:#f2c4be}
+  .queue-item .meta{font-size:12px;color:var(--muted)}
+  .queue-item .grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin-top:8px;font-size:13px}
+  @media(max-width:640px){.queue-item .grid2{grid-template-columns:1fr}}
+  .queue-item .grid2 b{font-weight:600}
+  .queue-item .from{font-size:12px;color:var(--muted);margin-top:8px}
+  .queue-item .actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .icon-btn{border:1px solid var(--line);background:#fff;border-radius:9px;width:34px;height:34px;color:var(--muted)}
+  .icon-btn:hover{color:var(--red);border-color:var(--red)}
+  .closed-note{font-size:12px;background:var(--green-bg);color:var(--green);
+    border-radius:8px;padding:6px 10px;margin-top:8px}
+
+  .chart-box{position:relative;height:280px;margin-top:12px}
+  .legend-rows{margin-top:12px}
+  .legend-rows .r{display:flex;justify-content:space-between;font-size:13.5px;padding:6px 0;border-bottom:1px dashed var(--line)}
+  .legend-rows .r:last-child{border-bottom:none}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px}
+
+  .mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:12px}
+  .mini{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .mini .l{font-size:10.5px;font-weight:700;letter-spacing:.7px;color:var(--muted)}
+  .mini .v{font-size:24px;font-weight:800;margin-top:4px}
+  .mini .v small{font-size:12px;font-weight:600;color:var(--muted)}
+  .mini .s{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .chip{font-size:12px;font-weight:600;background:var(--teal-50);color:var(--teal-900);
+    border:1px solid #cfe6e4;border-radius:16px;padding:4px 12px}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+  thead th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--muted);
+    border-bottom:1.5px solid var(--line);padding:8px 10px;text-transform:uppercase}
+  tbody td{padding:10px;border-bottom:1px solid #edf3f2;vertical-align:top}
+  tbody tr:hover{background:#fafcfb}
+  .search{width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);
+    border-radius:10px;margin-top:12px;outline:none}
+  .search:focus{border-color:var(--teal-600);box-shadow:0 0 0 3px rgba(15,143,133,.15)}
+  .stat-pill{font-size:11.5px;font-weight:700;border-radius:14px;padding:3px 10px;white-space:nowrap}
+  .st-Healing{background:var(--green-bg);color:var(--green)}
+  .st-Stable{background:var(--blue-bg);color:var(--blue)}
+  .st-Deteriorating{background:var(--red-bg);color:var(--red)}
+  .st-Healed{background:#eef2f1;color:var(--muted)}
+  .rowbtn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;
+    font-size:12px;font-weight:600;color:var(--teal-900)}
+  .rowbtn:hover{background:var(--teal-50)}
+
+  .sskin-row{margin-top:10px}
+  .sskin-row .t{display:flex;justify-content:space-between;font-size:13px}
+  .bar{height:7px;background:#e6eeed;border-radius:4px;margin-top:5px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--teal-600);border-radius:4px}
+  .big-pct{font-size:30px;font-weight:800;color:var(--teal-900)}
+
+  /* auth + modal */
+  .overlay{position:fixed;inset:0;background:rgba(16,38,36,.45);display:flex;
+    align-items:center;justify-content:center;z-index:100;padding:18px}
+  .modal{background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:90vh;
+    overflow:auto;padding:24px}
+  .modal h3{font-size:17px;font-weight:800}
+  .modal .sub{font-size:13px;color:var(--muted);margin-top:2px}
+  .f{margin-top:12px}
+  .f label{display:block;font-size:12.5px;font-weight:700;margin-bottom:5px}
+  .f label .req{color:var(--red)}
+  .f input,.f select,.f textarea{width:100%;font:inherit;font-size:14px;padding:9px 11px;
+    border:1px solid var(--line);border-radius:9px;outline:none;background:#fff}
+  .f textarea{min-height:80px;resize:vertical}
+  .f input:focus,.f select:focus,.f textarea:focus{border-color:var(--teal-600);
+    box-shadow:0 0 0 3px rgba(15,143,133,.15)}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+  @media(max-width:520px){.fgrid{grid-template-columns:1fr}}
+  .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+  .m-err{display:none;background:var(--red-bg);color:var(--red);border:1px solid #f2c4be;
+    border-radius:9px;padding:9px 12px;font-size:13px;margin-top:12px}
+  .m-err.show{display:block}
+  .checkline{display:flex;align-items:center;gap:9px;font-size:14px;padding:7px 0}
+  .checkline input{width:18px;height:18px;accent-color:var(--teal-700)}
+
+  .sign-card{background:#fff;border-radius:18px;max-width:400px;width:100%;
+    text-align:center;padding:40px 32px}
+  .sign-card h2{font-size:20px;margin:14px 0 6px}
+  .sign-card p{font-size:14px;color:var(--muted);line-height:1.5}
+  .ms-btn{display:inline-flex;align-items:center;gap:10px;font-size:15px;font-weight:600;
+    color:#fff;background:var(--teal-700);border:none;border-radius:12px;padding:13px 22px;margin-top:20px}
+  .ms-btn:hover{background:var(--teal-600)}
+  .ms-logo{display:inline-grid;grid-template-columns:8px 8px;gap:2px}
+  .ms-logo i{width:8px;height:8px;display:block}
+  .deny-x{font-size:44px}
+  .empty{font-size:13px;color:var(--muted);padding:14px 0}
+  footer{text-align:center;font-size:12px;color:var(--muted);margin:30px 0}
+  .loading-line{font-size:13px;color:var(--muted);padding:30px;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- auth gate -->
+<div class="overlay" id="authOverlay">
+  <div class="sign-card" id="signCard">
+    <div class="logo" style="margin:0 auto">✚</div>
+    <h2>Pressure Injury Command Center</h2>
+    <p>Restricted dashboard — wound care leadership only.<br>Sign in with your Almoosa Microsoft account.</p>
+    <button class="ms-btn" id="signBtn">
+      <span class="ms-logo" aria-hidden="true">
+        <i style="background:#f25022"></i><i style="background:#7fba00"></i>
+        <i style="background:#00a4ef"></i><i style="background:#ffb900"></i>
+      </span>
+      Sign in with Microsoft
+    </button>
+  </div>
+  <div class="sign-card hidden" id="denyCard">
+    <div class="deny-x">⚠️</div>
+    <h2>Access not granted</h2>
+    <p id="denyMsg">Your account is not on the dashboard access list. Contact Nursing Informatics to be added.</p>
+    <button class="ms-btn" id="denyRetry">Sign in with a different account</button>
+  </div>
+  <div class="sign-card hidden" id="checkCard">
+    <div class="logo" style="margin:0 auto">✚</div>
+    <h2>Checking your access…</h2>
+    <p>One moment.</p>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+<header>
+  <div class="logo">✚</div>
+  <div class="htitles">
+    <h1>Pressure Injury Command Center</h1>
+    <p>Wound Care · <span id="hCount">—</span> total cases tracked</p>
+  </div>
+  <div class="hspacer"></div>
+  <div class="toolbar">
+    <div class="seg" id="periodSeg">
+      <button data-days="7">7 days</button>
+      <button data-days="30" class="on">30 days</button>
+      <button data-days="90">90 days</button>
+    </div>
+    <button class="btn" id="btnRefresh" title="Reload data">⟳ Refresh</button>
+    <button class="btn" id="btnExport">⬇ Export CSV</button>
+    <button class="btn" id="btnAudit">📋 Quick audit</button>
+    <button class="btn primary" id="btnAddCase">＋ Add case</button>
+  </div>
+  <div class="user-chip" id="userChip"></div>
+</header>
+
+<main>
+  <div class="filters">
+    <label>FILTERS</label>
+    <label>Month</label><select id="fMonth"><option value="">All months</option></select>
+    <label>Unit</label><select id="fUnit"><option value="">All units</option></select>
+    <label>Origin</label><select id="fOrigin">
+      <option value="">All origins</option><option>HAPI</option><option>Community</option>
+    </select>
+    <span class="count" id="fCount"></span>
+  </div>
+
+  <div id="loading" class="loading-line">Loading live data from the wound care database…</div>
+
+  <div id="content" class="hidden">
+
+  <div class="banner">
+    <div>
+      <div style="font-size:11.5px;font-weight:700;letter-spacing:.6px;opacity:.9">✦ THIS PERIOD AT A GLANCE</div>
+      <h2 id="glanceHead">—</h2>
+      <p id="glanceSub">—</p>
+    </div>
+    <div class="bstats">
+      <div class="bstat"><div class="l">HEALING RATE</div><div class="v" id="bHealRate">—</div><div class="s">of active cases</div></div>
+      <div class="bstat"><div class="l">HEALED IN PERIOD</div><div class="v" id="bHealed">—</div><div class="s" id="bHealedSub">—</div></div>
+      <div class="bstat"><div class="l">TOTAL CASES</div><div class="v" id="bTotal">—</div><div class="s">All time</div></div>
+    </div>
+  </div>
+
+  <div class="grid g4">
+    <div class="card kpi"><div class="label">HAPI ACTIVE 🏥</div><div class="val" id="kHapi">—</div>
+      <div class="foot">Hospital-acquired, currently open</div><span class="delta" id="kHapiD"></span></div>
+    <div class="card kpi"><div class="label">COMMUNITY ACTIVE 🏠</div><div class="val" id="kComm">—</div>
+      <div class="foot">Community-acquired on admission</div><span class="delta" id="kCommD"></span></div>
+    <div class="card kpi"><div class="label">HEALED ✅</div><div class="val" id="kHealed">—</div>
+      <div class="foot" id="kHealedFoot">—</div><span class="delta" id="kHealedD"></span></div>
+    <div class="card kpi alert"><div class="label">DETERIORATING ⚠️</div><div class="val" id="kDet">—</div>
+      <div class="foot">Escalated to MDT review</div><span class="delta" id="kDetD"></span></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>🛡 Risk Assessment (Braden / Braden Q / NRAS)</h3>
+    <div class="sub" id="riskCoverage">—</div>
+    <div class="risk-grid" id="riskGrid"></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div>
+        <h3>📥 Referrals Queue</h3>
+        <div class="sub">Live submissions from nurses via the bedside QR</div>
+      </div>
+      <div class="actions" style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn" id="btnQR">🔲 Copy QR link</button>
+        <button class="btn" id="btnOpenOnly"></button>
+      </div>
+    </div>
+    <div id="queueList"></div>
+  </div>
+
+  <div class="grid g2-13">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap">
+        <div><h3>HAPI vs Community vs Healed</h3>
+        <div class="sub" id="trendSub">Weekly trend</div></div>
+        <span class="badge stage" id="trendBadge"></span>
+      </div>
+      <div class="chart-box"><canvas id="chTrend"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Wound Status Mix</h3>
+      <div class="sub" id="mixSub">—</div>
+      <div class="chart-box" style="height:220px"><canvas id="chMix"></canvas></div>
+      <div class="legend-rows" id="mixLegend"></div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>NPIAP Staging</h3><div class="sub">Severity distribution — active cases in filters</div>
+      <div class="chart-box"><canvas id="chStage"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Body Site Heatmap</h3><div class="sub">Where injuries are occurring</div>
+      <div class="chart-box"><canvas id="chSite"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap">
+      <div><h3>Treatment &amp; Measurements</h3>
+      <div class="sub">Wound size, exudate, tissue and dressings in use — active caseload</div></div>
+      <span class="badge stage" id="measBadge">—</span>
+    </div>
+    <div class="mini-grid" id="measGrid"></div>
+    <div style="margin-top:14px;font-size:11px;font-weight:700;letter-spacing:.7px;color:var(--muted)">TISSUE TYPE IN WOUND BED</div>
+    <div class="chips" id="tissueChips"></div>
+  </div>
+
+  <div class="grid g2-13">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap">
+        <div><h3>Active Caseload</h3>
+        <div class="sub">Live patient list — search by MRN to reassess</div></div>
+        <span class="badge" id="caseCount">—</span>
+      </div>
+      <input class="search" id="caseSearch" placeholder="Search by patient MRN / ID...">
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Patient</th><th>Origin</th><th>Stage</th><th>Location</th>
+          <th>Size (cm)</th><th>Status</th><th></th></tr></thead>
+        <tbody id="caseBody"></tbody>
+      </table></div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>❤️ SSKIN bundle compliance</h3>
+        <div class="sub" id="sskinSub">—</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+          <span class="big-pct" id="sskinPct">—</span>
+          <span class="sub">OVERALL</span>
+        </div>
+        <div id="sskinRows"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>Procedures report</h3>
+        <div class="sub">Debridement · Vacuum (NPWT) · Cultures · MDT referrals — in current filters</div>
+        <div class="mini-grid" id="procGrid"></div>
+        <div style="margin-top:14px;font-size:11px;font-weight:700;letter-spacing:.7px;color:var(--muted)">MDT REFERRALS BY DISCIPLINE</div>
+        <div class="legend-rows" id="mdtRows"></div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /content -->
+  <footer>Wound Watch · Almoosa Health · data lives in the hospital's wound care database</footer>
+</main>
+</div><!-- /app -->
+
+<div class="overlay hidden" id="modalOverlay"><div class="modal" id="modalBox"></div></div>
+
+<script>
+(function () {
+  "use strict";
+  const C = WW_CONFIG;
+  const $ = (id) => document.getElementById(id);
+
+  /* ══════════ AUTH — lightweight Microsoft sign-in + allowlist ══════════ */
+  const REDIRECT_URI = location.origin + location.pathname;
+
+  function signIn() {
+    const p = new URLSearchParams({
+      client_id: C.AZURE.CLIENT_ID, response_type: "id_token",
+      redirect_uri: REDIRECT_URI, scope: "openid profile email",
+      response_mode: "fragment", nonce: Math.random().toString(36).slice(2),
+    });
+    location.href = "https://login.microsoftonline.com/" + C.AZURE.TENANT_ID +
+      "/oauth2/v2.0/authorize?" + p.toString();
+  }
+  function parseHash(h) {
+    const r = {};
+    h.replace(/^#/, "").split("&").forEach(pair => {
+      const eq = pair.indexOf("=");
+      if (eq > -1) r[decodeURIComponent(pair.slice(0, eq))] = decodeURIComponent(pair.slice(eq + 1));
+    });
+    return r;
+  }
+  function parseJwt(t) {
+    try {
+      const b = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      return JSON.parse(decodeURIComponent(atob(b).split("").map(
+        ch => "%" + ("00" + ch.charCodeAt(0).toString(16)).slice(-2)).join("")));
+    } catch (e) { return {}; }
+  }
+  function domainOK(email) {
+    return (C.ALLOWED_DOMAINS || []).some(d => email.endsWith("@" + d));
+  }
+  function authView(id) {
+    ["signCard", "denyCard", "checkCard"].forEach(x => $(x).classList.add("hidden"));
+    $(id).classList.remove("hidden");
+  }
+
+  let USER = null;
+  try { USER = JSON.parse(sessionStorage.getItem("ww_user") || "null"); } catch (e) {}
+
+  if (location.hash && location.hash.includes("id_token")) {
+    const token = parseHash(location.hash)["id_token"];
+    history.replaceState(null, "", REDIRECT_URI);
+    if (token) {
+      const jwt = parseJwt(token);
+      const email = (jwt.preferred_username || jwt.email || jwt.upn || "").toLowerCase();
+      if (email && domainOK(email)) {
+        USER = { name: jwt.name || "", email: email };
+        sessionStorage.setItem("ww_user", JSON.stringify(USER));
+      } else {
+        USER = null;
+        $("denyMsg").textContent = "This account is not an Almoosa account. Sign in with your hospital Microsoft account.";
+      }
+    }
+  }
+
+  $("signBtn").addEventListener("click", signIn);
+  $("denyRetry").addEventListener("click", function () {
+    sessionStorage.removeItem("ww_user"); signIn();
+  });
+
+  /* ══════════ API ══════════ */
+  async function apiGet() {
+    const r = await fetch(C.API_URL + "?token=" + encodeURIComponent(C.API_TOKEN));
+    const out = await r.json();
+    if (!out.ok) throw new Error(out.error || "API error");
+    return out.data;
+  }
+  async function apiPost(action, table, data, id) {
+    const r = await fetch(C.API_URL, {
+      method: "POST",
+      body: JSON.stringify({ token: C.API_TOKEN, action, table, data: data || {}, id: id || null }),
+    });
+    const out = await r.json();
+    if (!out.ok) throw new Error(out.error || "API error");
+    return out;
+  }
+
+  /* ══════════ STATE ══════════ */
+  let DB = { wound_cases: [], wound_referrals: [], sskin_audits: [], wound_reassessments: [], app_users: [] };
+  let PERIOD = 30;
+  let FILTER = { month: "", unit: "", origin: "" };
+  let OPEN_ONLY = true;
+  const CHARTS = {};
+
+  /* ══════════ BOOT ══════════ */
+  (async function boot() {
+    if (!USER) { authView("signCard"); return; }
+    authView("checkCard");
+    try {
+      DB = await apiGet();
+    } catch (e) {
+      $("denyMsg").textContent = "Could not reach the wound care database (" + e.message + "). Check config.js token/URL and try again.";
+      authView("denyCard"); return;
+    }
+    const allowed = (DB.app_users || []).map(u => String(u.email || "").trim().toLowerCase()).filter(Boolean);
+    if (!allowed.includes(USER.email)) {
+      $("denyMsg").textContent = "Signed in as " + USER.email + " — this account is not on the dashboard access list. Contact Nursing Informatics to be added.";
+      authView("denyCard"); return;
+    }
+    $("authOverlay").classList.add("hidden");
+    $("app").classList.remove("hidden");
+    $("userChip").innerHTML = "<b>" + esc(USER.name) + "</b><a id='signOut'>Sign out</a>";
+    $("signOut").addEventListener("click", function () {
+      sessionStorage.removeItem("ww_user"); location.reload();
+    });
+    buildFilterOptions();
+    renderAll();
+    setInterval(refresh, 120000); // quiet auto-refresh every 2 min
+  })();
+
+  async function refresh() {
+    try { DB = await apiGet(); buildFilterOptions(); renderAll(); } catch (e) { console.error(e); }
+  }
+  $("btnRefresh").addEventListener("click", refresh);
+
+  /* ══════════ HELPERS ══════════ */
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g,
+      m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+  }
+  const num = v => { const x = parseFloat(v); return isNaN(x) ? null : x; };
+  const isTrue = v => v === true || String(v).toUpperCase() === "TRUE";
+  function d(v) { const x = new Date(v); return isNaN(x) ? null : x; }
+  function daysAgo(n) { const x = new Date(); x.setDate(x.getDate() - n); return x; }
+  function ago(v) {
+    const t = d(v); if (!t) return "";
+    const s = (Date.now() - t.getTime()) / 1000;
+    if (s < 3600) return Math.max(1, Math.round(s / 60)) + "m ago";
+    if (s < 86400) return Math.round(s / 3600) + "h ago";
+    return Math.round(s / 86400) + "d ago";
+  }
+  function monthOf(v) { const t = d(v); return t ? t.toISOString().slice(0, 7) : ""; }
+  function caseDate(c) { return d(c.date_assessed) || d(c.admission_date) || d(c.created_at); }
+  const ACTIVE = c => c.status !== "Healed";
+
+  function filteredCases() {
+    return DB.wound_cases.filter(c => {
+      if (FILTER.month && monthOf(caseDate(c)) !== FILTER.month) return false;
+      if (FILTER.unit && String(c.unit || "") !== FILTER.unit) return false;
+      if (FILTER.origin && String(c.origin || "") !== FILTER.origin) return false;
+      return true;
+    });
+  }
+
+  /* ══════════ FILTER OPTIONS ══════════ */
+  function buildFilterOptions() {
+    const months = [...new Set(DB.wound_cases.map(c => monthOf(caseDate(c))).filter(Boolean))].sort().reverse();
+    const units = [...new Set(DB.wound_cases.map(c => String(c.unit || "").trim()).filter(Boolean))].sort();
+    fillSelect($("fMonth"), months, FILTER.month, "All months");
+    fillSelect($("fUnit"), units, FILTER.unit, "All units");
+  }
+  function fillSelect(sel, values, current, allLabel) {
+    sel.innerHTML = "";
+    sel.add(new Option(allLabel, ""));
+    values.forEach(v => sel.add(new Option(v, v)));
+    sel.value = values.includes(current) ? current : "";
+  }
+  ["fMonth", "fUnit", "fOrigin"].forEach(id => $(id).addEventListener("change", function () {
+    FILTER = { month: $("fMonth").value, unit: $("fUnit").value, origin: $("fOrigin").value };
+    renderAll();
+  }));
+  $("periodSeg").addEventListener("click", function (e) {
+    const b = e.target.closest("button"); if (!b) return;
+    PERIOD = +b.dataset.days;
+    [...this.children].forEach(x => x.classList.toggle("on", x === b));
+    renderAll();
+  });
+
+  /* ══════════ RENDER ══════════ */
+  function renderAll() {
+    $("loading").classList.add("hidden");
+    $("content").classList.remove("hidden");
+
+    const cases = filteredCases();
+    const active = cases.filter(ACTIVE);
+    const all = DB.wound_cases;
+    const since = daysAgo(PERIOD), prevSince = daysAgo(PERIOD * 2);
+
+    $("hCount").textContent = all.length;
+    $("fCount").textContent = cases.length + " of " + all.length + " cases";
+
+    /* banner */
+    const healing = active.filter(c => c.status === "Healing").length;
+    const det = active.filter(c => c.status === "Deteriorating").length;
+    const rate = active.length ? Math.round(healing / active.length * 100) : 0;
+    const healedIn = cases.filter(c => c.status === "Healed" && d(c.updated_at) >= since);
+    $("glanceHead").textContent = active.length + " patients under active wound care, " + rate + "% trending toward healing.";
+    const hapiOpen = active.filter(c => c.origin === "HAPI").length;
+    const commOpen = active.filter(c => c.origin === "Community").length;
+    $("glanceSub").textContent = hapiOpen + " hospital-acquired and " + commOpen +
+      " community-acquired cases are currently open. " +
+      (det ? det + " deteriorating case" + (det > 1 ? "s need" : " needs") + " attention." :
+             "No deteriorating cases right now — great work.");
+    $("bHealRate").textContent = rate + "%";
+    $("bHealed").textContent = healedIn.length;
+    $("bHealedSub").textContent = "Last " + PERIOD + " days";
+    $("bTotal").textContent = all.length;
+
+    /* KPIs */
+    const newIn = (arr, o) => arr.filter(c => c.origin === o && d(c.created_at) >= since).length;
+    const newPrev = (arr, o) => arr.filter(c => c.origin === o && d(c.created_at) >= prevSince && d(c.created_at) < since).length;
+    setKpi("kHapi", hapiOpen, "kHapiD", newIn(cases, "HAPI"), newPrev(cases, "HAPI"));
+    setKpi("kComm", commOpen, "kCommD", newIn(cases, "Community"), newPrev(cases, "Community"));
+    $("kHealed").textContent = healedIn.length;
+    $("kHealedFoot").textContent =
+      healedIn.filter(c => c.origin === "HAPI").length + " hospital-acquired · " +
+      healedIn.filter(c => c.origin === "Community").length + " community-acquired";
+    $("kHealedD").textContent = "last " + PERIOD + " days";
+    $("kDet").textContent = det;
+    $("kDetD").textContent = det ? "review today" : "none — keep it up";
+
+    renderRisk(active);
+    renderQueue();
+    renderTrend(cases, since);
+    renderMix(active);
+    renderStage(active);
+    renderSites(active);
+    renderMeasurements(active);
+    renderCaseload(cases);
+    renderSskin();
+    renderProcedures(cases);
+  }
+  function setKpi(idV, val, idD, cur, prev) {
+    $(idV).textContent = val;
+    const diff = cur - prev;
+    $(idD).textContent = (diff >= 0 ? "↗ +" : "↘ ") + diff + " new vs last period";
+  }
+
+  /* ---- risk ---- */
+  function renderRisk(active) {
+    const scales = [
+      { name: "Braden",   note: "≤18 AT RISK", test: s => s <= 18, match: v => !v || v === "Braden" },
+      { name: "Braden Q", note: "≤16 AT RISK", test: s => s <= 16, match: v => v === "Braden Q" },
+      { name: "NRAS",     note: "≥13 AT RISK", test: s => s >= 13, match: v => v === "NRAS" },
+    ];
+    let assessedTotal = 0, riskTotal = 0, html = "";
+    scales.forEach(sc => {
+      const assessed = active.filter(c => num(c.braden_score) != null && sc.match(String(c.risk_scale || "").trim()));
+      const atRisk = assessed.filter(c => sc.test(num(c.braden_score)));
+      assessedTotal += assessed.length; riskTotal += atRisk.length;
+      html += '<div class="risk"><div class="t">' + sc.name +
+        "<small>" + sc.note + "</small></div>" +
+        '<div class="v">' + atRisk.length + ' <small>at risk</small></div>' +
+        '<div class="a">' + assessed.length + " assessed</div></div>";
+    });
+    $("riskGrid").innerHTML = html;
+    const cov = active.length ? Math.round(assessedTotal / active.length * 100) : 0;
+    $("riskCoverage").textContent = assessedTotal + "/" + active.length +
+      " active patients assessed (" + cov + "% coverage) · " + riskTotal + " at risk (any scale)";
+  }
+
+  /* ---- referrals queue ---- */
+  function renderQueue() {
+    const refs = DB.wound_referrals.slice().sort((a, b) => new Date(b.referred_at || b.created_at) - new Date(a.referred_at || a.created_at));
+    const open = refs.filter(r => r.status !== "Closed");
+    $("btnOpenOnly").textContent = OPEN_ONLY ? "Open only (" + open.length + ")" : "Showing all (" + refs.length + ")";
+    const list = OPEN_ONLY ? open : refs;
+    if (!list.length) {
+      $("queueList").innerHTML = '<div class="empty">No ' + (OPEN_ONLY ? "open " : "") +
+        'referrals right now. New submissions from the QR form appear here automatically.</div>';
+      return;
+    }
+    $("queueList").innerHTML = list.map(r => {
+      const closed = r.status === "Closed";
+      return '<div class="queue-item"><div class="top">' +
+        '<span class="pid">' + esc(r.patient_id) + "</span>" +
+        (r.suspected_stage ? '<span class="badge stage">' + esc(r.suspected_stage) + "</span>" : "") +
+        (isTrue(r.signs_of_infection) ? '<span class="badge red">infection signs</span>' : "") +
+        '<span class="meta">' +
+          (r.bed ? "Bed " + esc(r.bed) + " · " : "") +
+          esc(r.facility || "") + (r.facility && r.unit ? " · " : "") + esc(r.unit || "") +
+          " · " + ago(r.referred_at || r.created_at) + "</span>" +
+        '<span class="actions">' +
+          (closed ? "" : '<button class="btn primary" data-review="' + r.id + '">✓ Review</button>') +
+          '<button class="icon-btn" title="Delete referral" data-delref="' + r.id + '">🗑</button>' +
+        "</span></div>" +
+        '<div class="grid2">' +
+          "<div>Location: <b>" + esc(r.wound_location || "—") + "</b></div>" +
+          "<div>Stage: <b>" + esc(r.suspected_stage || "—") + "</b></div>" +
+          "<div>Braden: <b>" + esc(r.braden_score || "—") + "</b></div>" +
+          "<div>Reason: <b>" + esc(r.reason || "—") + "</b></div>" +
+          (r.notes ? "<div style='grid-column:1/-1'>Notes: <b>" + esc(r.notes) + "</b></div>" : "") +
+        "</div>" +
+        '<div class="from">From ' + esc(r.referring_nurse || "Anonymous nurse") +
+          (r.referring_nurse_id ? " · ID " + esc(r.referring_nurse_id) : "") + "</div>" +
+        (closed ? '<div class="closed-note">Closed ' + ago(r.reviewed_at) + " by " +
+          esc(r.reviewed_by || "—") + " — " + esc(r.feedback || "") + "</div>" : "") +
+      "</div>";
+    }).join("");
+  }
+  $("btnOpenOnly").addEventListener("click", function () { OPEN_ONLY = !OPEN_ONLY; renderQueue(); });
+  $("btnQR").addEventListener("click", function () {
+    const url = location.origin + location.pathname.replace(/index\.html$/, "") + "referral.html";
+    navigator.clipboard.writeText(url).then(() => {
+      this.textContent = "✓ Link copied"; setTimeout(() => this.textContent = "🔲 Copy QR link", 1800);
+    });
+  });
+  $("queueList").addEventListener("click", function (e) {
+    const rv = e.target.closest("[data-review]");
+    if (rv) return openReview(rv.getAttribute("data-review"));
+    const del = e.target.closest("[data-delref]");
+    if (del && confirm("Delete this referral permanently?")) {
+      apiPost("delete", "wound_referrals", null, del.getAttribute("data-delref")).then(refresh);
+    }
+  });
+
+  /* ---- charts ---- */
+  function chart(id, cfg) {
+    if (CHARTS[id]) CHARTS[id].destroy();
+    CHARTS[id] = new Chart($(id).getContext("2d"), cfg);
+  }
+  function renderTrend(cases, since) {
+    const buckets = 4, ms = PERIOD * 86400000 / buckets;
+    const labels = [], hapi = [], comm = [], healed = [];
+    for (let i = 0; i < buckets; i++) {
+      labels.push("W" + (i + 1));
+      const a = new Date(since.getTime() + i * ms), b = new Date(since.getTime() + (i + 1) * ms);
+      const inB = (v) => { const t = d(v); return t && t >= a && t < b; };
+      hapi.push(cases.filter(c => c.origin === "HAPI" && inB(c.created_at)).length);
+      comm.push(cases.filter(c => c.origin === "Community" && inB(c.created_at)).length);
+      healed.push(cases.filter(c => c.status === "Healed" && inB(c.updated_at)).length);
+    }
+    $("trendSub").textContent = "Weekly trend — last " + PERIOD + " days";
+    const active = cases.filter(ACTIVE);
+    const rate = active.length ? Math.round(active.filter(c => c.status === "Healing").length / active.length * 100) : 0;
+    $("trendBadge").textContent = rate + "% healing";
+    chart("chTrend", {
+      type: "line",
+      data: { labels, datasets: [
+        { label: "HAPI", data: hapi, borderColor: "#0d7a72", backgroundColor: "rgba(13,122,114,.15)", fill: true, tension: .4 },
+        { label: "Community", data: comm, borderColor: "#e08e2b", backgroundColor: "rgba(224,142,43,.1)", tension: .4 },
+        { label: "Healed", data: healed, borderColor: "#1a8a5a", backgroundColor: "rgba(26,138,90,.1)", tension: .4 },
+      ]},
+      options: { maintainAspectRatio: false, plugins: { legend: { position: "bottom" } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+    });
+  }
+  function renderMix(active) {
+    const order = ["Healing", "Stable", "Deteriorating"];
+    const colors = { Healing: "#1a8a5a", Stable: "#2779bd", Deteriorating: "#c0392b" };
+    const counts = order.map(s => active.filter(c => c.status === s).length);
+    $("mixSub").textContent = "Across " + active.length + " active patients";
+    chart("chMix", {
+      type: "doughnut",
+      data: { labels: order, datasets: [{ data: counts, backgroundColor: order.map(s => colors[s]), borderWidth: 2 }] },
+      options: { maintainAspectRatio: false, cutout: "68%", plugins: { legend: { display: false } } },
+    });
+    $("mixLegend").innerHTML = order.map((s, i) =>
+      '<div class="r"><span><span class="dot" style="background:' + colors[s] + '"></span>' + s +
+      "</span><b>" + counts[i] + " patients</b></div>").join("");
+  }
+  function renderStage(active) {
+    const stages = C.STAGES.filter(s => s !== "Not sure");
+    const count = st => active.filter(c => String(c.stage || "").includes(st)).length;
+    chart("chStage", {
+      type: "bar",
+      data: { labels: stages, datasets: [{ data: stages.map(count), backgroundColor: "#0d7a72", borderRadius: 6 }] },
+      options: { indexAxis: "y", maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } },
+    });
+  }
+  function renderSites(active) {
+    const counts = {};
+    active.forEach(c => String(c.wound_location || "").split(",").map(s => s.trim()).filter(Boolean)
+      .forEach(loc => counts[loc] = (counts[loc] || 0) + 1));
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 7);
+    chart("chSite", top.length >= 3 ? {
+      type: "radar",
+      data: { labels: top.map(x => x[0]), datasets: [{ data: top.map(x => x[1]),
+        backgroundColor: "rgba(13,122,114,.2)", borderColor: "#0d7a72", pointBackgroundColor: "#0d7a72" }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { r: { beginAtZero: true, ticks: { precision: 0 } } } },
+    } : {
+      type: "bar",
+      data: { labels: top.map(x => x[0]), datasets: [{ data: top.map(x => x[1]),
+        backgroundColor: "#0d7a72", borderRadius: 6 }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+    });
+  }
+
+  /* ---- measurements ---- */
+  function renderMeasurements(active) {
+    const measured = active.filter(c => num(c.length_cm) != null && num(c.width_cm) != null);
+    $("measBadge").textContent = measured.length + "/" + active.length + " measured";
+    const avgArea = measured.length ?
+      (measured.reduce((a, c) => a + num(c.length_cm) * num(c.width_cm), 0) / measured.length).toFixed(1) : "—";
+    const depths = active.map(c => num(c.depth_cm)).filter(v => v != null);
+    const avgDepth = depths.length ? (depths.reduce((a, b) => a + b, 0) / depths.length).toFixed(1) : "—";
+    const mode = (field) => {
+      const m = {};
+      active.forEach(c => { const v = String(c[field] || "").trim(); if (v) m[v] = (m[v] || 0) + 1; });
+      const top = Object.entries(m).sort((a, b) => b[1] - a[1])[0];
+      return top ? { name: top[0], n: top[1] } : null;
+    };
+    const ex = mode("exudate"), dr = mode("dressing");
+    $("measGrid").innerHTML =
+      mini("AVG WOUND AREA", avgArea + ' <small>cm²</small>', "Length × width across " + measured.length + " wounds") +
+      mini("AVG DEPTH", avgDepth + ' <small>cm</small>', "Across all measured wounds") +
+      mini("EXUDATE MIX", ex ? esc(ex.name) : "—", ex ? ex.n + " wounds" : "No exudate logged") +
+      mini("TOP DRESSINGS", dr ? esc(dr.name) : "—", dr ? dr.n + " in use" : "No dressings logged");
+    const tc = {};
+    active.forEach(c => { const v = String(c.tissue_type || "").trim(); if (v) tc[v] = (tc[v] || 0) + 1; });
+    $("tissueChips").innerHTML = Object.keys(tc).length ?
+      Object.entries(tc).map(([k, v]) => '<span class="chip">● ' + esc(k) + " " + v + "</span>").join("") :
+      '<span class="empty">No tissue types logged yet</span>';
+  }
+  function mini(l, v, s) {
+    return '<div class="mini"><div class="l">' + l + '</div><div class="v">' + v +
+      '</div><div class="s">' + s + "</div></div>";
+  }
+
+  /* ---- caseload ---- */
+  function renderCaseload(cases) {
+    const q = $("caseSearch").value.trim().toLowerCase();
+    const list = cases.filter(c => !q || String(c.patient_id || "").toLowerCase().includes(q))
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+    $("caseCount").textContent = cases.filter(ACTIVE).length + " active in filters";
+    $("caseBody").innerHTML = list.length ? list.map(c => {
+      const size = (num(c.length_cm) != null && num(c.width_cm) != null) ?
+        num(c.length_cm) + " × " + num(c.width_cm) + (num(c.depth_cm) != null ? " × " + num(c.depth_cm) : "") : "—";
+      return "<tr><td><b>" + esc(c.patient_id) + "</b><br><span style='font-size:11.5px;color:var(--muted)'>" +
+          (c.unit ? "Unit " + esc(c.unit) : "") + (c.admission_date ? " · adm " + esc(String(c.admission_date).slice(0, 10)) : "") + "</span></td>" +
+        "<td><span class='badge'>" + esc(c.origin || "—") + "</span></td>" +
+        "<td>" + esc(c.stage || "—") + "</td>" +
+        "<td>" + esc(c.wound_location || "—") + "</td>" +
+        "<td>" + size + "</td>" +
+        "<td><span class='stat-pill st-" + esc(c.status || "Stable") + "'>" + esc(c.status || "—") + "</span></td>" +
+        "<td style='white-space:nowrap'><button class='rowbtn' data-reassess='" + c.id + "'>Reassess</button> " +
+        "<button class='icon-btn' data-delcase='" + c.id + "' title='Delete case'>🗑</button></td></tr>";
+    }).join("") : "<tr><td colspan='7' class='empty'>No cases match. Add a case with the ＋ button, or accept a referral from the queue.</td></tr>";
+  }
+  $("caseSearch").addEventListener("input", () => renderCaseload(filteredCases()));
+  $("caseBody").addEventListener("click", function (e) {
+    const r = e.target.closest("[data-reassess]");
+    if (r) return openReassess(r.getAttribute("data-reassess"));
+    const del = e.target.closest("[data-delcase]");
+    if (del && confirm("Delete this case and its history permanently?")) {
+      apiPost("delete", "wound_cases", null, del.getAttribute("data-delcase")).then(refresh);
+    }
+  });
+
+  /* ---- SSKIN ---- */
+  function renderSskin() {
+    const audits = DB.sskin_audits.filter(a => d(a.created_at) >= daysAgo(30));
+    $("sskinSub").textContent = audits.length + " audit" + (audits.length === 1 ? "" : "s") + " · last 30 days";
+    const items = [
+      ["Skin inspection", "skin_inspection"], ["Right support surface", "surface"],
+      ["Keep moving (q2h)", "keep_moving"], ["Incontinence / moisture care", "incontinence"],
+      ["Nutrition screen", "nutrition"],
+    ];
+    let sum = 0;
+    $("sskinRows").innerHTML = items.map(([label, key]) => {
+      const pct = audits.length ? Math.round(audits.filter(a => isTrue(a[key])).length / audits.length * 100) : 0;
+      sum += pct;
+      return '<div class="sskin-row"><div class="t"><span>' + label + "</span><b>" + pct +
+        '%</b></div><div class="bar"><i style="width:' + pct + '%"></i></div></div>';
+    }).join("");
+    $("sskinPct").textContent = (audits.length ? Math.round(sum / items.length) : 0) + "%";
+  }
+
+  /* ---- procedures ---- */
+  function renderProcedures(cases) {
+    const deb = cases.filter(c => isTrue(c.debridement_done)).length;
+    const vac = cases.filter(c => isTrue(c.vacuum_applied)).length;
+    const cul = cases.filter(c => isTrue(c.culture_taken)).length;
+    const mdt = cases.filter(c => isTrue(c.referred_other));
+    $("procGrid").innerHTML =
+      mini("DEBRIDEMENTS", deb, "in current filters") + mini("VACUUM (NPWT)", vac, "in current filters") +
+      mini("CULTURES", cul, "in current filters") + mini("MDT REFERRALS", mdt.length, "in current filters");
+    const disc = {};
+    mdt.forEach(c => { const v = String(c.referred_to || "Unspecified").trim() || "Unspecified"; disc[v] = (disc[v] || 0) + 1; });
+    $("mdtRows").innerHTML = Object.keys(disc).length ?
+      Object.entries(disc).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
+        '<div class="r"><span>' + esc(k) + "</span><b>" + v + " patient" + (v > 1 ? "s" : "") + " · " +
+        Math.round(v / mdt.length * 100) + "%</b></div>").join("") :
+      '<div class="empty">No MDT referrals in current filters</div>';
+  }
+
+  /* ══════════ MODALS ══════════ */
+  function openModal(html) { $("modalBox").innerHTML = html; $("modalOverlay").classList.remove("hidden"); }
+  function closeModal() { $("modalOverlay").classList.add("hidden"); }
+  $("modalOverlay").addEventListener("click", e => { if (e.target === $("modalOverlay")) closeModal(); });
+  function mErr(msg) { const b = $("mErr"); b.textContent = msg; b.classList.add("show"); }
+  const opts = (arr, extra) => (extra || "") + arr.map(v => "<option>" + esc(v) + "</option>").join("");
+
+  /* --- review referral (mandatory feedback) --- */
+  function openReview(id) {
+    const r = DB.wound_referrals.find(x => String(x.id) === String(id));
+    if (!r) return;
+    openModal(
+      "<h3>Review referral — " + esc(r.patient_id) + "</h3>" +
+      '<div class="sub">' + esc(r.wound_location || "—") + " · " + esc(r.suspected_stage || "stage —") +
+        " · from " + esc(r.referring_nurse || "anonymous") + "</div>" +
+      '<div class="f"><label>Feedback / plan <span class="req">*</span></label>' +
+      '<textarea id="rvFeedback" placeholder="Assessment findings, plan, instructions to the unit..."></textarea></div>' +
+      '<div class="checkline"><input type="checkbox" id="rvAccept" checked>' +
+      "<span>Accept into active caseload (creates a wound case)</span></div>" +
+      '<div class="fgrid" id="rvCaseFields">' +
+        '<div class="f"><label>Origin</label><select id="rvOrigin"><option>HAPI</option><option>Community</option></select></div>' +
+        '<div class="f"><label>Starting status</label><select id="rvStatus"><option>Healing</option><option>Stable</option><option>Deteriorating</option></select></div>' +
+      "</div>" +
+      '<div class="m-err" id="mErr"></div>' +
+      '<div class="actions"><button class="btn" id="rvCancel">Cancel</button>' +
+      '<button class="btn primary" id="rvSave" disabled>Save &amp; close referral</button></div>'
+    );
+    const fb = $("rvFeedback"), save = $("rvSave");
+    fb.addEventListener("input", () => {
+      save.disabled = !fb.value.trim();
+      $("mErr").classList.remove("show");
+    });
+    $("rvAccept").addEventListener("change", function () {
+      $("rvCaseFields").style.display = this.checked ? "" : "none";
+    });
+    $("rvCancel").addEventListener("click", closeModal);
+    save.addEventListener("click", async function () {
+      if (!fb.value.trim()) return mErr("Feedback is required to close this referral.");
+      save.disabled = true; save.textContent = "Saving…";
+      try {
+        if ($("rvAccept").checked) {
+          await apiPost("insert", "wound_cases", {
+            patient_id: r.patient_id, unit: r.unit || null,
+            admission_date: new Date().toISOString().slice(0, 10),
+            wound_location: r.wound_location || null,
+            stage: (r.suspected_stage || "").split(",")[0].trim() || null,
+            origin: $("rvOrigin").value, status: $("rvStatus").value,
+            braden_score: num(r.braden_score), notes: r.notes || null,
+            date_assessed: new Date().toISOString().slice(0, 10),
+          });
+        }
+        await apiPost("update", "wound_referrals", {
+          status: "Closed", feedback: fb.value.trim(),
+          reviewed_by: USER.name, reviewed_at: new Date().toISOString(),
+        }, r.id);
+        closeModal(); refresh();
+      } catch (e) {
+        mErr("Could not save: " + e.message);
+        save.disabled = false; save.textContent = "Save & close referral";
+      }
+    });
+  }
+
+  /* --- add case --- */
+  $("btnAddCase").addEventListener("click", function () {
+    const units = [...new Set([].concat(...Object.values(C.UNITS_BY_FACILITY)))].filter(u => u !== "Other");
+    openModal(
+      "<h3>Add wound case</h3><div class='sub'>Direct entry into the active caseload</div>" +
+      '<div class="fgrid">' +
+      '<div class="f"><label>Patient ID <span class="req">*</span></label><input id="acPid" placeholder="MRN"></div>' +
+      '<div class="f"><label>Unit</label><select id="acUnit"><option value="">—</option>' + opts(units) + "</select></div>" +
+      '<div class="f"><label>Admission date</label><input type="date" id="acAdm"></div>' +
+      '<div class="f"><label>Wound location</label><select id="acLoc"><option value="">—</option>' + opts(C.LOCATIONS) + "</select></div>" +
+      '<div class="f"><label>Stage</label><select id="acStage"><option value="">—</option>' + opts(C.STAGES) + "</select></div>" +
+      '<div class="f"><label>Origin</label><select id="acOrigin"><option>HAPI</option><option>Community</option></select></div>' +
+      '<div class="f"><label>Status</label><select id="acStatus"><option>Healing</option><option>Stable</option><option>Deteriorating</option></select></div>' +
+      '<div class="f"><label>Risk scale</label><select id="acScale"><option>Braden</option><option>Braden Q</option><option>NRAS</option></select></div>' +
+      '<div class="f"><label>Risk score</label><input type="number" id="acBraden" placeholder="e.g. 14"></div>' +
+      '<div class="f"><label>Length (cm)</label><input type="number" step="0.1" id="acLen"></div>' +
+      '<div class="f"><label>Width (cm)</label><input type="number" step="0.1" id="acWid"></div>' +
+      '<div class="f"><label>Depth (cm)</label><input type="number" step="0.1" id="acDep"></div>' +
+      '<div class="f"><label>Exudate</label><select id="acExu"><option value="">—</option><option>None</option><option>Low</option><option>Moderate</option><option>High</option></select></div>' +
+      '<div class="f"><label>Tissue type</label><select id="acTis"><option value="">—</option><option>Granulation</option><option>Slough</option><option>Eschar</option><option>Epithelial</option><option>Mixed</option></select></div>' +
+      '<div class="f"><label>Dressing</label><input id="acDress" placeholder="e.g. foam, silver alginate"></div>' +
+      "</div>" +
+      '<div class="f"><label>Notes</label><textarea id="acNotes"></textarea></div>' +
+      '<div class="m-err" id="mErr"></div>' +
+      '<div class="actions"><button class="btn" id="acCancel">Cancel</button>' +
+      '<button class="btn primary" id="acSave">Add case</button></div>'
+    );
+    $("acAdm").value = new Date().toISOString().slice(0, 10);
+    $("acCancel").addEventListener("click", closeModal);
+    $("acSave").addEventListener("click", async function () {
+      if (!$("acPid").value.trim()) return mErr("Patient ID is required.");
+      this.disabled = true; this.textContent = "Saving…";
+      try {
+        await apiPost("insert", "wound_cases", {
+          patient_id: $("acPid").value.trim(), unit: $("acUnit").value || null,
+          admission_date: $("acAdm").value || null, wound_location: $("acLoc").value || null,
+          stage: $("acStage").value || null, origin: $("acOrigin").value,
+          status: $("acStatus").value, risk_scale: $("acScale").value,
+          braden_score: num($("acBraden").value),
+          length_cm: num($("acLen").value), width_cm: num($("acWid").value), depth_cm: num($("acDep").value),
+          exudate: $("acExu").value || null, tissue_type: $("acTis").value || null,
+          dressing: $("acDress").value.trim() || null, notes: $("acNotes").value.trim() || null,
+          date_assessed: new Date().toISOString().slice(0, 10), provider: USER.name,
+        });
+        closeModal(); refresh();
+      } catch (e) { mErr("Could not save: " + e.message); this.disabled = false; this.textContent = "Add case"; }
+    });
+  });
+
+  /* --- reassess --- */
+  function openReassess(id) {
+    const c = DB.wound_cases.find(x => String(x.id) === String(id));
+    if (!c) return;
+    openModal(
+      "<h3>Reassess — " + esc(c.patient_id) + "</h3>" +
+      "<div class='sub'>" + esc(c.wound_location || "—") + " · " + esc(c.stage || "—") +
+      " · currently <b>" + esc(c.status || "—") + "</b></div>" +
+      '<div class="fgrid">' +
+      '<div class="f"><label>Status <span class="req">*</span></label><select id="raStatus">' +
+        opts(["Healing", "Stable", "Deteriorating", "Healed"]) + "</select></div>" +
+      '<div class="f"><label>Exudate</label><select id="raExu"><option value="">—</option><option>None</option><option>Low</option><option>Moderate</option><option>High</option></select></div>' +
+      '<div class="f"><label>Length (cm)</label><input type="number" step="0.1" id="raLen" value="' + (num(c.length_cm) ?? "") + '"></div>' +
+      '<div class="f"><label>Width (cm)</label><input type="number" step="0.1" id="raWid" value="' + (num(c.width_cm) ?? "") + '"></div>' +
+      '<div class="f"><label>Depth (cm)</label><input type="number" step="0.1" id="raDep" value="' + (num(c.depth_cm) ?? "") + '"></div>' +
+      '<div class="f"><label>Tissue type</label><select id="raTis"><option value="">—</option><option>Granulation</option><option>Slough</option><option>Eschar</option><option>Epithelial</option><option>Mixed</option></select></div>' +
+      "</div>" +
+      '<div class="f"><label>Dressing</label><input id="raDress" value="' + esc(c.dressing || "") + '"></div>' +
+      '<div class="f"><label>Notes</label><textarea id="raNotes"></textarea></div>' +
+      '<div class="m-err" id="mErr"></div>' +
+      '<div class="actions"><button class="btn" id="raCancel">Cancel</button>' +
+      '<button class="btn primary" id="raSave">Save reassessment</button></div>'
+    );
+    $("raStatus").value = c.status || "Stable";
+    $("raCancel").addEventListener("click", closeModal);
+    $("raSave").addEventListener("click", async function () {
+      this.disabled = true; this.textContent = "Saving…";
+      const payload = {
+        status: $("raStatus").value, exudate: $("raExu").value || null,
+        length_cm: num($("raLen").value), width_cm: num($("raWid").value), depth_cm: num($("raDep").value),
+        tissue_type: $("raTis").value || null, dressing: $("raDress").value.trim() || null,
+        notes: $("raNotes").value.trim() || null,
+      };
+      try {
+        await apiPost("insert", "wound_reassessments", Object.assign({
+          case_id: c.id, reassessed_on: new Date().toISOString().slice(0, 10),
+          reassessed_by: USER.name,
+        }, payload));
+        await apiPost("update", "wound_cases", Object.assign({
+          date_assessed: new Date().toISOString().slice(0, 10),
+        }, payload, { notes: c.notes || null }), c.id);
+        closeModal(); refresh();
+      } catch (e) { mErr("Could not save: " + e.message); this.disabled = false; this.textContent = "Save reassessment"; }
+    });
+  }
+
+  /* --- quick audit --- */
+  $("btnAudit").addEventListener("click", function () {
+    const units = [...new Set([].concat(...Object.values(C.UNITS_BY_FACILITY)))].filter(u => u !== "Other");
+    const boxes = [
+      ["skin_inspection", "Skin inspection done"], ["surface", "Right support surface in place"],
+      ["keep_moving", "Repositioning q2h followed"], ["incontinence", "Incontinence / moisture managed"],
+      ["nutrition", "Nutrition screening done"],
+    ];
+    openModal(
+      "<h3>Quick SSKIN audit</h3><div class='sub'>One bedside audit — feeds the compliance panel</div>" +
+      '<div class="f"><label>Unit</label><select id="auUnit"><option value="">—</option>' + opts(units) + "</select></div>" +
+      boxes.map(([k, l]) => '<label class="checkline"><input type="checkbox" id="au_' + k + '"> ' + l + "</label>").join("") +
+      '<div class="f"><label>Notes</label><textarea id="auNotes"></textarea></div>' +
+      '<div class="m-err" id="mErr"></div>' +
+      '<div class="actions"><button class="btn" id="auCancel">Cancel</button>' +
+      '<button class="btn primary" id="auSave">Save audit</button></div>'
+    );
+    $("auCancel").addEventListener("click", closeModal);
+    $("auSave").addEventListener("click", async function () {
+      this.disabled = true; this.textContent = "Saving…";
+      try {
+        await apiPost("insert", "sskin_audits", {
+          audit_date: new Date().toISOString().slice(0, 10),
+          unit: $("auUnit").value || null, auditor: USER.name,
+          skin_inspection: $("au_skin_inspection").checked, surface: $("au_surface").checked,
+          keep_moving: $("au_keep_moving").checked, incontinence: $("au_incontinence").checked,
+          nutrition: $("au_nutrition").checked, notes: $("auNotes").value.trim() || null,
+        });
+        closeModal(); refresh();
+      } catch (e) { mErr("Could not save: " + e.message); this.disabled = false; this.textContent = "Save audit"; }
+    });
+  });
+
+  /* --- export CSV --- */
+  $("btnExport").addEventListener("click", function () {
+    const cases = filteredCases();
+    if (!cases.length) return alert("No cases in the current filters to export.");
+    const cols = Object.keys(cases[0]);
+    const csvCell = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+    const csv = [cols.join(",")].concat(
+      cases.map(c => cols.map(k => csvCell(c[k])).join(","))).join("\r\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+    a.download = "wound_cases_" + new Date().toISOString().slice(0, 10) + ".csv";
+    a.click();
+  });
+})();
+</script>
+</body>
+</html>

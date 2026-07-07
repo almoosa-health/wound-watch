@@ -11,6 +11,12 @@ const WW_CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbzAGsE6i0HLdtA9JXoVRUAS7jvZMKxLlnivy1mjF01OctBLQQ5blxaU8lxnfxJi0TvH/exec",
   API_TOKEN: "98FG81fmlvLbm8BBcNcalgEL5IPUvkhXylLmm2Hq",
 
+  /* Microsoft Entra (Azure AD) sign-in */
+  AZURE: {
+    CLIENT_ID: "99021e86-9507-4a54-8dc2-d51143d7998a",
+    TENANT_ID: "1bbc68f6-abcf-4283-92d7-5bb0a7c3c84b",
+  },
+
   APP_NAME: "Wound Care Referral",
   TAGLINE: "Scan · Snap · Send — under 60 seconds",
 

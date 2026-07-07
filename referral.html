@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wound Care Referral — Scan · Snap · Send</title>
+<script src="config.js"></script>
+<style>
+  :root {
+    --teal-900: #0b4f4a;
+    --teal-700: #0d7a72;
+    --teal-600: #0f8f85;
+    --teal-50:  #e8f4f3;
+    --ink:      #1c2b2a;
+    --muted:    #5f7472;
+    --line:     #d9e5e4;
+    --bg:       #f2f6f6;
+    --card:     #ffffff;
+    --red:      #c0392b;
+    --amber-bg: #fdf6e8;
+    --amber-ln: #e8d5a8;
+    --radius:   14px;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg); color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    background: var(--card); border-bottom: 1px solid var(--line);
+    padding: 14px 20px; display: flex; align-items: center; gap: 12px;
+  }
+  .logo {
+    width: 40px; height: 40px; border-radius: 12px; flex: none;
+    background: var(--teal-700); color: #fff; display: flex;
+    align-items: center; justify-content: center; font-size: 20px;
+  }
+  header h1 { font-size: 17px; font-weight: 700; letter-spacing: .1px; }
+  header p  { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+
+  main { max-width: 640px; margin: 24px auto 60px; padding: 0 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 22px;
+    box-shadow: 0 1px 2px rgba(11,79,74,.05);
+  }
+  .notice {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--teal-50); border: 1px solid #cfe6e4;
+    border-radius: 10px; padding: 12px 14px; font-size: 13.5px;
+    color: var(--teal-900); margin-bottom: 20px; line-height: 1.45;
+  }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .field { margin-bottom: 16px; }
+  label { display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 6px; }
+  label .req { color: var(--red); }
+  input[type="text"], select, textarea {
+    width: 100%; font: inherit; font-size: 15px; color: var(--ink);
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+    background: #fff; outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--teal-600); box-shadow: 0 0 0 3px rgba(15,143,133,.15);
+  }
+  textarea { min-height: 88px; resize: vertical; }
+  select:disabled { background: #f3f5f5; color: var(--muted); }
+
+  .sites-head { font-size: 13.5px; font-weight: 700; margin: 22px 0 8px; }
+  .site-row {
+    display: grid; grid-template-columns: 1fr 150px 38px; gap: 8px;
+    margin-bottom: 8px; align-items: center;
+  }
+  @media (max-width: 520px) { .site-row { grid-template-columns: 1fr 120px 38px; } }
+  .icon-btn {
+    border: 1px solid var(--line); background: #fff; border-radius: 10px;
+    height: 40px; cursor: pointer; color: var(--muted); font-size: 16px;
+  }
+  .icon-btn:hover { color: var(--red); border-color: var(--red); }
+  .add-site {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: inherit; font-size: 13.5px; font-weight: 600; color: var(--teal-700);
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px 14px; cursor: pointer; margin: 2px 0 14px;
+  }
+  .add-site:hover { background: var(--teal-50); }
+
+  .tip {
+    background: var(--amber-bg); border: 1px solid var(--amber-ln);
+    border-radius: 10px; padding: 14px 16px; margin: 4px 0 18px;
+    font-size: 13.5px; line-height: 1.5; display: none;
+  }
+  .tip.show { display: block; }
+  .tip h4 { font-size: 13.5px; margin-bottom: 6px; }
+  .tip ul { padding-left: 18px; }
+  .tip li + li { margin-top: 3px; }
+
+  .error-box {
+    display: none; background: #fdeceb; border: 1px solid #f2b8b2;
+    color: var(--red); border-radius: 10px; padding: 11px 14px;
+    font-size: 13.5px; margin-bottom: 14px;
+  }
+  .error-box.show { display: block; }
+
+  .submit {
+    width: 100%; font: inherit; font-size: 16px; font-weight: 700; color: #fff;
+    background: var(--teal-700); border: none; border-radius: 12px;
+    padding: 14px; cursor: pointer; letter-spacing: .2px;
+  }
+  .submit:hover { background: var(--teal-600); }
+  .submit:disabled { opacity: .6; cursor: wait; }
+
+  /* success screen */
+  .success { text-align: center; padding: 10px 4px; }
+  .success .check {
+    width: 64px; height: 64px; border-radius: 50%; margin: 6px auto 14px;
+    background: var(--teal-50); color: var(--teal-700);
+    display: flex; align-items: center; justify-content: center; font-size: 32px;
+  }
+  .success h2 { font-size: 20px; margin-bottom: 6px; }
+  .success p  { font-size: 14px; color: var(--muted); line-height: 1.5; }
+  .success .tip { text-align: left; margin-top: 18px; display: block; }
+  .reminder {
+    text-align: left; background: var(--teal-50); border: 1px solid #cfe6e4;
+    border-radius: 10px; padding: 12px 14px; font-size: 13.5px;
+    color: var(--teal-900); margin-top: 12px; line-height: 1.5;
+  }
+  .again {
+    margin-top: 20px; font: inherit; font-size: 14.5px; font-weight: 600;
+    color: var(--teal-700); background: #fff; border: 1px solid var(--line);
+    border-radius: 10px; padding: 11px 20px; cursor: pointer;
+  }
+  .again:hover { background: var(--teal-50); }
+  footer { text-align: center; font-size: 12px; color: var(--muted); margin: 26px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">✚</div>
+  <div>
+    <h1 id="appName">Wound Care Referral</h1>
+    <p id="tagline">Scan · Snap · Send — under 60 seconds</p>
+  </div>
+</header>
+
+<main>
+  <div class="card" id="formCard">
+    <div class="notice">
+      <span>📋</span>
+      <span>No physician order needed. Pick the suspected stage and you'll get a
+      quick care tip to use until we come.</span>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label>Your name <span class="req">*</span></label>
+        <input type="text" id="nurse" placeholder="e.g. Sara M." autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Staff ID <span class="req">*</span></label>
+        <input type="text" id="nurseId" placeholder="e.g. 12345" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label>Facility <span class="req">*</span></label>
+        <select id="facility"><option value="">Pick facility</option></select>
+      </div>
+      <div class="field">
+        <label>Unit <span class="req">*</span></label>
+        <select id="unit" disabled><option value="">Pick facility first</option></select>
+      </div>
+    </div>
+
+    <div class="field" id="otherUnitWrap" style="display:none">
+      <label>Other unit — write it <span class="req">*</span></label>
+      <input type="text" id="otherUnit" placeholder="Unit name">
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label>Patient ID <span class="req">*</span></label>
+        <input type="text" id="patientId" placeholder="MRN or initials" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Bed / room</label>
+        <input type="text" id="bed" placeholder="e.g. 12" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="sites-head">Wound sites — one row per site, with suspected stage</div>
+    <div id="sites"></div>
+    <button type="button" class="add-site" id="addSite">＋ Add another site</button>
+
+    <div class="field">
+      <input type="text" id="otherLocation" placeholder="Other site (write if different)">
+    </div>
+
+    <div class="tip" id="tipBox"></div>
+
+    <div class="field">
+      <label>Reason for referral <span class="req">*</span></label>
+      <select id="reason"><option value="">Pick a reason</option></select>
+    </div>
+
+    <div class="field">
+      <label>Notes (optional)</label>
+      <textarea id="notes" placeholder="Anything else the wound care nurse should know"></textarea>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+    <button type="button" class="submit" id="submitBtn">➤ &nbsp;Send referral</button>
+  </div>
+
+  <div class="card success" id="successCard" style="display:none">
+    <div class="check">✓</div>
+    <h2>Referral sent</h2>
+    <p>The wound care team has your referral.<br>Until they arrive, follow the care tip below.</p>
+    <div id="successTips"></div>
+    <div class="reminder" id="measureReminder"></div>
+    <button type="button" class="again" id="againBtn">Send another referral</button>
+  </div>
+
+  <footer>Wound Watch · Almoosa Health</footer>
+</main>
+
+<script>
+(function () {
+  const C = WW_CONFIG;
+  const $ = (id) => document.getElementById(id);
+
+  document.title = C.APP_NAME + " — Scan · Snap · Send";
+  $("appName").textContent = C.APP_NAME;
+  $("tagline").textContent = C.TAGLINE;
+  $("measureReminder").textContent = "📏 " + C.MEASUREMENT_REMINDER;
+
+  /* ---- populate dropdowns from config ---- */
+  C.FACILITIES.forEach(f => $("facility").add(new Option(f, f)));
+  C.REASONS.forEach(r => $("reason").add(new Option(r, r)));
+
+  $("facility").addEventListener("change", function () {
+    const units = C.UNITS_BY_FACILITY[this.value] || [];
+    const sel = $("unit");
+    sel.innerHTML = "";
+    sel.add(new Option(units.length ? "Pick unit" : "Pick facility first", ""));
+    units.forEach(u => sel.add(new Option(u, u)));
+    sel.disabled = !units.length;
+    applyPresetUnit();
+    toggleOtherUnit();
+  });
+  $("unit").addEventListener("change", toggleOtherUnit);
+  function toggleOtherUnit() {
+    $("otherUnitWrap").style.display = $("unit").value === "Other" ? "" : "none";
+  }
+
+  /* ---- QR preset: referral.html?unit=MICU (optionally &facility=ASH) ---- */
+  const params = new URLSearchParams(location.search);
+  const presetFacility = params.get("facility");
+  const presetUnit = params.get("unit");
+  if (presetFacility && C.UNITS_BY_FACILITY[presetFacility]) {
+    $("facility").value = presetFacility;
+    $("facility").dispatchEvent(new Event("change"));
+  } else if (presetUnit) {
+    // find which facility owns this unit
+    for (const f of C.FACILITIES) {
+      if ((C.UNITS_BY_FACILITY[f] || []).includes(presetUnit)) {
+        $("facility").value = f;
+        $("facility").dispatchEvent(new Event("change"));
+        break;
+      }
+    }
+  }
+  function applyPresetUnit() {
+    if (presetUnit) {
+      const sel = $("unit");
+      for (const o of sel.options) if (o.value === presetUnit) { sel.value = presetUnit; break; }
+    }
+  }
+
+  /* ---- wound site rows ---- */
+  const sitesWrap = $("sites");
+  function addSiteRow() {
+    const row = document.createElement("div");
+    row.className = "site-row";
+    const loc = document.createElement("select");
+    loc.add(new Option("Pick site", ""));
+    C.LOCATIONS.forEach(l => loc.add(new Option(l, l)));
+    const stg = document.createElement("select");
+    stg.add(new Option("Stage", ""));
+    C.STAGES.forEach(s => stg.add(new Option(s, s)));
+    stg.addEventListener("change", () => showTip(stg.value));
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "icon-btn"; del.textContent = "🗑";
+    del.title = "Remove this site";
+    del.addEventListener("click", () => {
+      if (sitesWrap.children.length > 1) row.remove();
+      else { loc.value = ""; stg.value = ""; }
+    });
+    row.append(loc, stg, del);
+    sitesWrap.appendChild(row);
+  }
+  addSiteRow();
+  $("addSite").addEventListener("click", addSiteRow);
+
+  /* ---- live care tip ---- */
+  function tipHTML(stage) {
+    const t = C.STAGE_TIPS[stage];
+    if (!t) return "";
+    return "<h4>💡 " + t.title + "</h4><ul>" +
+      t.steps.map(s => "<li>" + s + "</li>").join("") + "</ul>";
+  }
+  function showTip(stage) {
+    const box = $("tipBox");
+    const html = tipHTML(stage);
+    box.innerHTML = html;
+    box.classList.toggle("show", !!html);
+  }
+
+  /* ---- validation + submit ---- */
+  function fail(msg) {
+    const box = $("errorBox");
+    box.textContent = msg;
+    box.classList.add("show");
+    box.scrollIntoView({ behavior: "smooth", block: "center" });
+    return null;
+  }
+
+  function collect() {
+    $("errorBox").classList.remove("show");
+    const nurse = $("nurse").value.trim();
+    const nurseId = $("nurseId").value.trim();
+    const facility = $("facility").value;
+    let unit = $("unit").value;
+    if (unit === "Other") unit = $("otherUnit").value.trim();
+    const patientId = $("patientId").value.trim();
+
+    if (!nurse)     return fail("Your name is required.");
+    if (!nurseId)   return fail("Staff ID is required.");
+    if (!facility)  return fail("Facility is required.");
+    if (!unit)      return fail("Unit is required.");
+    if (!patientId) return fail("Patient ID is required.");
+
+    const sites = [];
+    for (const row of sitesWrap.children) {
+      const [loc, stg] = row.querySelectorAll("select");
+      if (loc.value) sites.push({ location: loc.value, stage: stg.value });
+    }
+    const extra = $("otherLocation").value.trim();
+    if (extra) sites.push({ location: extra, stage: "" });
+    if (!sites.length) return fail("At least one wound site is required.");
+    if (sites.some(s => !s.stage && s.location !== extra))
+      return fail("Pick a suspected stage for each site.");
+    if (!$("reason").value) return fail("Reason for referral is required.");
+
+    const locationStr = sites
+      .map(s => s.stage ? s.location + " (" + s.stage + ")" : s.location).join(", ");
+    const stagesStr = [...new Set(sites.map(s => s.stage).filter(Boolean))].join(", ");
+
+    return {
+      referred_at: new Date().toISOString(),
+      referring_nurse: nurse,
+      referring_nurse_id: nurseId,
+      facility: facility,
+      unit: unit,
+      patient_id: patientId,
+      bed: $("bed").value.trim() || null,
+      wound_location: locationStr || null,
+      suspected_stage: stagesStr || null,
+      signs_of_infection: false,
+      reason: $("reason").value,
+      notes: $("notes").value.trim() || null,
+      priority: "None",
+      status: "Open",
+      _stages: sites.map(s => s.stage).filter(Boolean),
+    };
+  }
+
+  $("submitBtn").addEventListener("click", async function () {
+    const data = collect();
+    if (!data) return;
+    const stages = data._stages; delete data._stages;
+
+    const btn = this;
+    btn.disabled = true; btn.textContent = "Sending…";
+    try {
+      const res = await fetch(C.API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          token: C.API_TOKEN, action: "insert",
+          table: "wound_referrals", data: data,
+        }),
+      });
+      const out = await res.json();
+      if (!out.ok) throw new Error(out.error || "Server rejected the referral.");
+
+      $("successTips").innerHTML = [...new Set(stages)]
+        .map(s => '<div class="tip show">' + tipHTML(s) + "</div>").join("");
+      $("formCard").style.display = "none";
+      $("successCard").style.display = "";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      fail("Could not send the referral — " + err.message +
+           " Check your connection and try again.");
+    } finally {
+      btn.disabled = false; btn.textContent = "➤ \u00a0Send referral";
+    }
+  });
+
+  $("againBtn").addEventListener("click", () => location.reload());
+})();
+</script>
+</body>
+</html>
